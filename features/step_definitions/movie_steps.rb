@@ -46,8 +46,8 @@ Given /^I am on the RottenPotatoes home page$/ do
 # Add a declarative step here for populating the DB with movies.
 
 Given /the following movies have been added to RottenPotatoes:/ do |movies_table|
-  pending  # Remove this statement when you finish implementing the test step
   movies_table.hashes.each do |movie|
+    Movie.create!(movie)
     # Each returned movie will be a hash representing one row of the movies_table
     # The keys will be the table headers and the values will be the row contents.
     # Entries can be directly to the database with ActiveRecord methods
@@ -59,16 +59,71 @@ When /^I have opted to see movies rated: "(.*?)"$/ do |arg1|
   # HINT: use String#split to split up the rating_list, then
   # iterate over the ratings and check/uncheck the ratings
   # using the appropriate Capybara command(s)
-  pending  #remove this statement after implementing the test step
+  visit movies_path
+  
+  uncheck('ratings_G')
+  uncheck('ratings_PG')
+  uncheck('ratings_PG-13')
+  uncheck('ratings_NC-17')
+  uncheck('ratings_R')
+  
+  ratings = arg1.split(',').each do |rating|
+    check('ratings_'+rating.strip)
+  end
+  click_button('Refresh')
 end
 
 Then /^I should see only movies rated: "(.*?)"$/ do |arg1|
-  pending  #remove this statement after implementing the test step
+    result = true
+    rh={}
+    
+    arg1.split(',').each do |rating|
+        rating2 = rating.strip
+        rh[rating2]=1
+        if rating2 == 'NC-17'
+            next
+        elsif page.has_no_css?('td', :text => /\A#{rating2}\z/)
+            result = false
+        end
+    end
+    
+    x = ['G','PG','PG-13','R','NC-17']
+    
+    x.each do |rating3|
+        if !rh.has_key?(rating3)
+            if page.has_css?('td', :text => /\A#{rating3}\z/)
+                result = false
+            end
+        end
+    end
+    
+    expect(result).to be_truthy
 end
+
 
 Then /^I should see all of the movies$/ do
-  pending  #remove this statement after implementing the test step
+  rows=0
+  find('tbody').all('tr').each do |tr|
+   rows+=1
+  end
+  
+  rows.should == Movie.all.count 
 end
 
+When /^I have sorted movies alphabetically$/ do
+    click_on "title_header"
+end
 
+Then /^I should see "(.*?)" before "(.*?)"$/ do |title1, title2|
+    regex = /#{title1}{1}.*#{title2}{1}/m
+    page.body =~ regex
+end
 
+When /^I have sorted movies by ascending release date$/ do
+    click_on "release_date_header"
+end
+
+Then /^I will see "(.*?)" before "(.*?)"$/ do |title1, title2|
+    regex = /#{title1}{1}.*#{title2}{1}/m
+    page.body =~ regex
+end
